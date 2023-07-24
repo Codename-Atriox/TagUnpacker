@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using static Infinite_module_test.module_structs;
 using static Infinite_module_test.code_utils;
 using OodleSharp;
+using System.Reflection.PortableExecutable;
+using System.ComponentModel;
 
 namespace Tag_Unpacker{
     internal class Program{
@@ -15,11 +17,12 @@ namespace Tag_Unpacker{
             // args should be as follows:
             // arg[0]: path of the module to unpack
             // arg[1]: unpacked tags directory, note that this should have the game version appended if we're doing that 
-            // arg[2]: a comma separated list of tag types to include/disclude - NOT IMPLEMENTED YET
+            // arg[2]: a directory to export csv files of common structures, for analysis
             // example args
             args = new string[]{
                 "D:\\Programs\\Steam\\steamapps\\common\\Halo Infinite\\deploy\\pc\\levels\\multi\\ctf_bazaar\\ctf_bazaar-rtx-new.module",
-                "D:\\T\\" // include the "\\" at the end
+                "D:\\T\\ctf_bazaar-rtx-new\\", // include the "\\" at the end
+                "D:\\T\\ctf_bazaar-rtx-new\\STRUCTS\\"
             };
 
             if (args.Length < 1){
@@ -30,24 +33,30 @@ namespace Tag_Unpacker{
                 Console.WriteLine("No output tag directory specified, failed to unpack");
                 Console.ReadLine();
                 return;}
+            string struct_dir = "";
+            if (args.Length > 2){
+                Console.WriteLine("Enabled struct dumping mode");
+                struct_dir = args[2];}
 
             Console.WriteLine("begining unpack process");
-            new unmodulatinator(args[0], args[1]);
+            new unmodulatinator(args[0], args[1], struct_dir);
             Console.WriteLine("completed unpack process, press enter to exit");
             Console.ReadLine();
         }
     }
     public class unmodulatinator{
-        public unmodulatinator(string _module_file_path, string _out_tag_directory){
+        public unmodulatinator(string _module_file_path, string _out_tag_directory, string _out_csv_directory){
             //module = new module_data();
             module_file_path = _module_file_path;
             out_tag_directory = _out_tag_directory;
+            out_csv_directory = _out_csv_directory;
             unpack();
         }
         module_data module;
         FileStream module_reader;
         string module_file_path;
         string out_tag_directory;
+        string out_csv_directory;
 
         void unpack(){
 
@@ -75,6 +84,11 @@ namespace Tag_Unpacker{
                 for (int i = 0; i < module.blocks.Length; i++)
                     module.blocks[i] = read_and_convert_to<block_header>(block_header_size);
 
+                if (!string.IsNullOrEmpty(out_csv_directory)){
+                    write_Filearray_csv(module.files, out_csv_directory + "tag_headers.csv");
+                    //SaveArrayAsCSV(module.resource_table, out_csv_directory + "resources.csv");
+                    //SaveArrayAsCSV(module.blocks, out_csv_directory + "data_blocks.csv");
+                }
 
                 // now to read the compressed data junk
 
@@ -167,6 +181,8 @@ namespace Tag_Unpacker{
 
                     // now write the file from the decompressed data (tag header + tag data + tag resource + whatever else we had)
                     Directory.CreateDirectory(Path.GetDirectoryName(file_path));
+                    if (File.Exists(file_path))
+                        Console.WriteLine("Warning: Overwriting file:" + file_path);
                     File.WriteAllBytes(file_path, decompressed_data);
 
                 }
@@ -180,6 +196,44 @@ namespace Tag_Unpacker{
             result += (char)((groupid >> 8) & 0xFF);
             result += (char)(groupid & 0xFF);
             return result;
+        }
+        void write_Filearray_csv(module_file[] content, string fileName){
+            Directory.CreateDirectory(Path.GetDirectoryName(fileName));
+            using (StreamWriter file = new StreamWriter(fileName)){
+                file.WriteLine("ClassGroup,Flags,BlockCount,BlockIndex,ResourceIndex,ClassId,DataOffset,Unk_0x14,TotalCompressedSize,TotalUncompressedSize,GlobalTagId,UncompressedHeaderSize,UncompressedTagDataSize,UncompressedResourceDataSize,UncompressedActualResourceDataSize,HeaderAlignment,TagDataAlightment,ResourceDataAligment,ActualResourceDataAligment,NameOffset,ParentIndex,AssetChecksum,AssetId,ResourceCount,Unk_0x54");
+                for (int i = 0; i < module.files.Length; i++){
+                    var cfile = module.files[i];
+                    StringBuilder stringBuilder = new StringBuilder();
+
+                    string row = string.Join(',', new object[] {
+                        cfile.ClassGroup,
+                        cfile.Flags,
+                        cfile.BlockCount,
+                        cfile.BlockIndex,
+                        cfile.ResourceIndex,
+                        groupID_str(cfile.ClassId),
+                        cfile.DataOffset,
+                        cfile.Unk_0x14,
+                        cfile.TotalCompressedSize,
+                        cfile.TotalUncompressedSize,
+                        cfile.GlobalTagId.ToString("X"),
+                        cfile.UncompressedHeaderSize,
+                        cfile.UncompressedTagDataSize,
+                        cfile.UncompressedResourceDataSize,
+                        cfile.UncompressedActualResourceDataSize,
+                        cfile.HeaderAlignment,
+                        cfile.TagDataAlightment,
+                        cfile.ResourceDataAligment,
+                        cfile.ActualResourceDataAligment,
+                        cfile.NameOffset,
+                        cfile.ParentIndex,
+                        cfile.AssetChecksum.ToString("X"),
+                        cfile.AssetId.ToString("X"),
+                        cfile.ResourceCount,
+                        cfile.Unk_0x54});
+                    file.WriteLine(row);
+                }
+            }
         }
 
         T read_and_convert_to<T>(int read_length){
