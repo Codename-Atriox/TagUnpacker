@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,14 +24,17 @@ namespace Tag_Unpacker{
 
             if (args.Length < 1){
                 Console.WriteLine("No input module directory specified, failed to unpack");
+                Console.ReadLine();
                 return;}
             if (args.Length < 2){
                 Console.WriteLine("No output tag directory specified, failed to unpack");
+                Console.ReadLine();
                 return;}
 
             Console.WriteLine("begining unpack process");
             new unmodulatinator(args[0], args[1]);
-            Console.WriteLine("completed unpack process");
+            Console.WriteLine("completed unpack process, press enter to exit");
+            Console.ReadLine();
         }
     }
     public class unmodulatinator{
@@ -126,6 +129,7 @@ namespace Tag_Unpacker{
                     // but realistically, we'll worry about that when we get around to it, or rather when 343 gets around to it
 
                     // get tag name
+                    /*
                     string tag_name = "";
                     int byte_offset = 0;
                     while (true){
@@ -135,11 +139,31 @@ namespace Tag_Unpacker{
                         tag_name += (char)next_character;
                         byte_offset++;
                     }
-                    // fixup the name if needed
-                    string file_path = out_tag_directory + tag_name;
-                    string test_extension = Path.GetExtension(file_path);
-                    if (test_extension.Contains(":"))
-                        file_path = Path.ChangeExtension(file_path, test_extension.Replace(":", "-"));
+                    */
+                    // we are now going to sort tags into their respective group folder, and then unsigned hex tagID
+                    string file_path = out_tag_directory;
+                    if (module.files[i].ParentIndex != -1)
+                    {
+                        module_file par_tag = module.files[module.files[i].ParentIndex];
+                        // get parent tag,, use their name
+                        file_path += groupID_str(par_tag.ClassId) + "\\" + par_tag.GlobalTagId.ToString("X");
+                        // figure out what index this resource is
+                        int resource_index = -1;
+                        for (int r = 0; r < par_tag.ResourceCount; r++){
+                            if (module.resource_table[par_tag.ResourceIndex + r] == i){
+                                resource_index = r;
+                                break;
+                            }
+                        }
+                        file_path += "_res_" + resource_index;
+                        // determine whether is chunked or not??
+
+                    }
+                    else // regular file
+                    {
+                        file_path += groupID_str(module.files[i].ClassId) + "\\" + module.files[i].GlobalTagId.ToString("X");
+
+                    }
 
                     // now write the file from the decompressed data (tag header + tag data + tag resource + whatever else we had)
                     Directory.CreateDirectory(Path.GetDirectoryName(file_path));
@@ -148,6 +172,15 @@ namespace Tag_Unpacker{
                 }
                 // ok thats all, the tags have been read
         }}
+
+        string groupID_str(int groupid){
+            string result = "";
+            result += (char)((groupid >> 24) & 0xFF);
+            result += (char)((groupid >> 16) & 0xFF);
+            result += (char)((groupid >> 8) & 0xFF);
+            result += (char)(groupid & 0xFF);
+            return result;
+        }
 
         T read_and_convert_to<T>(int read_length){
             byte[] bytes = new byte[read_length];
