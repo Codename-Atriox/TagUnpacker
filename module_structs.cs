@@ -61,7 +61,12 @@ namespace Infinite_module_test
         public const int module_file_size = 0x58;
         [StructLayout(LayoutKind.Explicit, Size = module_file_size)] public struct module_file
         {
-                                
+            public long get_dataoffset() {
+                return (long)(DataOffset_and_flags & 0x0000FFFFFFFFFFFF);
+            }
+            public ushort get_dataflags(){
+                return (ushort)(DataOffset_and_flags >> 48);
+            }
             [FieldOffset(0x00)] public byte    ClassGroup;     //  
             [FieldOffset(0x01)] public byte    Flags;          // refer to flag bits below this struct
             [FieldOffset(0x02)] public ushort  BlockCount;     // "The number of blocks that make up the file. Only valid if the HasBlocks flag is set"
@@ -70,8 +75,8 @@ namespace Infinite_module_test
                                 
             [FieldOffset(0x0C)] public int     ClassId;        // this is the tag group, should be a string right?
                                 
-            [FieldOffset(0x10)] public uint    DataOffset;     // for now just read as a long // wow we were not infact reading this a long
-            [FieldOffset(0x14)] public uint    Unk_0x14;       // we will now need to double check each file to make sure if this number is ever anything // its used in the very big files
+            [FieldOffset(0x10)] public ulong   DataOffset_and_flags;     // for now just read as a long // wow we were not infact reading this a long
+            //[FieldOffset(0x14)] public uint    Unk_0x14;       // we will now need to double check each file to make sure if this number is ever anything // its used in the very big files
 
             [FieldOffset(0x18)] public int     TotalCompressedSize;    // "The total size of compressed data."
             [FieldOffset(0x1C)] public int     TotalUncompressedSize;  // "The total size of the data after it is uncompressed. If this is 0, then the file is empty."

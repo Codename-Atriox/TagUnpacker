@@ -20,9 +20,9 @@ namespace Tag_Unpacker{
             // arg[2]: a directory to export csv files of common structures, for analysis
             // example args
             args = new string[]{
-                "D:\\Programs\\Steam\\steamapps\\common\\Halo Infinite\\deploy\\pc\\levels\\multi\\ctf_bazaar\\ctf_bazaar-rtx-new.module",
-                "D:\\T\\ctf_bazaar-rtx-new\\", // include the "\\" at the end
-                "D:\\T\\ctf_bazaar-rtx-new\\STRUCTS\\"
+                "D:\\Programs\\Steam\\steamapps\\common\\Halo Infinite\\deploy\\pc\\globals\\forge\\forge_objects-rtx-new.module",
+                "D:\\T\\PC\\forge_objects-rtx-new\\", // include the "\\" at the end
+                "D:\\T\\PC\\forge_objects-rtx-new\\STRUCTS\\"
             };
 
             if (args.Length < 1){
@@ -95,7 +95,8 @@ namespace Tag_Unpacker{
                 // align accordingly to 0x?????000 padding to read data
                 long aligned_address = (module_reader.Position / 0x1000 + 1) * 0x1000;
                 //module_reader.Seek(aligned_address, SeekOrigin.Begin);
-                
+
+                int nullindex = 0;
 
                 for (int i = 0; i < module.files.Length; i++){
                     // read the flags to determine how to process this file
@@ -104,7 +105,7 @@ namespace Tag_Unpacker{
                     bool reading_raw_file = (module.files[i].Flags & 0b00000100) > 0;
 
                     byte[] decompressed_data = new byte[module.files[i].TotalUncompressedSize];
-                    long data_Address = aligned_address + module.files[i].DataOffset;
+                    long data_Address = aligned_address + module.files[i].get_dataoffset();
 
                     if (reading_separate_blocks){
                         for (int b = 0; b < module.files[i].BlockCount; b++){
@@ -156,6 +157,7 @@ namespace Tag_Unpacker{
                     */
                     // we are now going to sort tags into their respective group folder, and then unsigned hex tagID
                     string file_path = out_tag_directory;
+
                     if (module.files[i].ParentIndex != -1)
                     {
                         module_file par_tag = module.files[module.files[i].ParentIndex];
@@ -175,8 +177,11 @@ namespace Tag_Unpacker{
                     }
                     else // regular file
                     {
-                        file_path += groupID_str(module.files[i].ClassId) + "\\" + module.files[i].GlobalTagId.ToString("X");
-
+                        // we need to remove the trailing spaces
+                        if (module.files[i].GlobalTagId == -1) // then this is a special file
+                            file_path += groupID_str(module.files[i].ClassId) + "\\" + module.files[i].GlobalTagId.ToString("X") + "_" + nullindex++;
+                        else
+                            file_path += groupID_str(module.files[i].ClassId) + "\\" + module.files[i].GlobalTagId.ToString("X");
                     }
 
                     // now write the file from the decompressed data (tag header + tag data + tag resource + whatever else we had)
@@ -195,7 +200,7 @@ namespace Tag_Unpacker{
             result += (char)((groupid >> 16) & 0xFF);
             result += (char)((groupid >> 8) & 0xFF);
             result += (char)(groupid & 0xFF);
-            return result;
+            return result.Trim().Replace('*', '_');
         }
         void write_Filearray_csv(module_file[] content, string fileName){
             Directory.CreateDirectory(Path.GetDirectoryName(fileName));
@@ -212,8 +217,8 @@ namespace Tag_Unpacker{
                         cfile.BlockIndex,
                         cfile.ResourceIndex,
                         groupID_str(cfile.ClassId),
-                        cfile.DataOffset,
-                        cfile.Unk_0x14,
+                        cfile.get_dataoffset(),
+                        cfile.get_dataflags(),
                         cfile.TotalCompressedSize,
                         cfile.TotalUncompressedSize,
                         cfile.GlobalTagId.ToString("X"),
