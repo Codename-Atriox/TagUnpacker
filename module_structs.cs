@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Infinite_module_test
 {
     // VERSION 52 // VERSION 52 // VERSION 52 //
-    public static class module_structs
+    public static class module_structs_old
     {
         public struct module_data // sizeof = DYNAMIC (sizeof = file.size - mohd.sizeof)
         {

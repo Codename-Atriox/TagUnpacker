@@ -20,9 +20,9 @@ namespace Tag_Unpacker{
             // arg[2]: a directory to export csv files of common structures, for analysis
             // example args
             args = new string[]{
-                "D:\\Programs\\Steam\\steamapps\\common\\Halo Infinite\\deploy\\pc\\globals\\forge\\forge_objects-rtx-new.module",
-                "D:\\T\\PC\\forge_objects-rtx-new\\", // include the "\\" at the end
-                "D:\\T\\PC\\forge_objects-rtx-new\\STRUCTS\\"
+                "D:\\Programs\\Steam\\steamapps\\common\\Halo Infinite\\deploy\\pc\\levels\\multi\\sgh_streets\\sgh_streets-rtx-new.module",
+                "D:\\T\\PC\\sgh_streets-rtx-new\\", // include the "\\" at the end
+                "D:\\T\\PC\\sgh_streets-rtx-new\\STRUCTS\\"
             };
 
             if (args.Length < 1){
@@ -50,14 +50,29 @@ namespace Tag_Unpacker{
             module_file_path = _module_file_path;
             out_tag_directory = _out_tag_directory;
             out_csv_directory = _out_csv_directory;
-            unpack();
+            new_unpack();
         }
-        module_data module;
+        //module_data module;
         FileStream module_reader;
         string module_file_path;
         string out_tag_directory;
         string out_csv_directory;
 
+        void new_unpack()
+        {
+            module new_module = new(module_file_path);
+            foreach (var folder in new_module.file_groups){
+
+                foreach (var tag in folder.Value){
+                    try{
+                        File.WriteAllBytes(out_tag_directory + folder.Key + "\\" + tag.name, new_module.get_tag_bytes(tag.source_file_header_index));
+                    }catch (Exception ex) {
+                        Console.WriteLine(tag.name + " could not be exported!: " + ex.Message);
+                    }
+                }
+            }
+        }
+        /*
         void unpack(){
 
             // and then he said "it's module'n time"
@@ -154,7 +169,7 @@ namespace Tag_Unpacker{
                         tag_name += (char)next_character;
                         byte_offset++;
                     }
-                    */
+                    ///
                     // we are now going to sort tags into their respective group folder, and then unsigned hex tagID
                     string file_path = out_tag_directory;
 
@@ -246,5 +261,6 @@ namespace Tag_Unpacker{
             module_reader.Read(bytes, 0, read_length);
             return KindaSafe_SuperCast<T>(bytes);
         }
+*/
     }
 }

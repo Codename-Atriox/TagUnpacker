@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OddleSharp\OodleSharp\OodleSharp.csproj" />
+    <ProjectReference Include="..\TagFramework\TagFramework.csproj" />
   </ItemGroup>
 
 </Project>
